@@ -54,7 +54,7 @@ def make_train(wagons, train_number, endstation, driver):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        wagons = int(request.form.get('wagons', 3))
+        wagons = max(1, min(8, int(request.form.get('wagons', 4))))
         return redirect(url_for('login', wagons=wagons))
     return render_template('index.html')
 
@@ -62,7 +62,7 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        wagons = int(request.form.get('wagons'))
+        wagons = max(1, min(8, int(request.form.get('wagons'))))
         train_number = request.form.get('train_number')
         endstation = request.form.get('endstation')
         driver = request.form.get('driver')
@@ -75,7 +75,7 @@ def login():
             pass
         return redirect(url_for('main'))
     # show empty form (user must fill in values)
-    wagons = int(request.args.get('wagons', 3))
+    wagons = max(1, min(8, int(request.args.get('wagons', 4))))
     return render_template('login.html', wagons=wagons)
 
 
@@ -90,6 +90,11 @@ def logout():
 def serve_logs(filename):
     # serve simple CSV login log for auditing
     return send_from_directory(os.path.join(os.getcwd(), 'logs'), filename)
+
+
+@app.route('/audio/<path:filename>')
+def serve_audio(filename):
+    return send_from_directory(os.path.join(os.getcwd(), 'audio'), filename)
 
 
 @app.route('/admin')

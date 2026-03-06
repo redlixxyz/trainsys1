@@ -7,7 +7,119 @@ const DOOR_LABELS  = ['FR', 'FL', 'BR', 'BL'];
 const TOP_DOORS    = [0, 2];
 const BOTTOM_DOORS = [1, 3];
 
-/* ─── Fetch ──────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   SOUND ENGINE
+   ─ Sequential vocal-clip queue
+   ─ Looping critical-error alarm
+   ─ One-shot PSI / brake alerts
+   ═══════════════════════════════════════════════════════ */
+const SoundEngine = (() => {
+  const BASE = '/audio/';
+  let muted = false;
+
+  /* ── Sequential clip queue ─────────────────────────── */
+  const queue = [];
+  let isPlaying = false;
+
+  function _mk(path) {
+    return new window.Audio(BASE + path);
+  }
+
+  function _drain() {
+    if (muted || queue.length === 0) { isPlaying = false; return; }
+    isPlaying = true;
+    const src = queue.shift();
+    const a = _mk(src);
+    a.onended = _drain;
+    a.onerror = _drain;
+    a.play().catch(_drain);
+  }
+
+  function enqueue(clips) {
+    queue.push(...clips);
+    if (!isPlaying) _drain();
+  }
+
+  /* ── Looping critical-error alarm ──────────────────── */
+  let critAudio  = null;
+  let critActive = false;
+
+  function setCritLoop(active) {
+    if (active === critActive) return;
+    critActive = active;
+    if (active) {
+      if (!muted) {
+        critAudio = _mk('crit_error_loop.ogg');
+        critAudio.loop = true;
+        critAudio.play().catch(() => {});
+      }
+    } else {
+      if (critAudio) { critAudio.pause(); critAudio.currentTime = 0; critAudio = null; }
+    }
+  }
+
+  /* ── Looping PSI-warning alarm ───────────────────────── */
+  let psiAudio  = null;
+  let psiActive = false;
+
+  function setPsiLoop(active) {
+    if (active === psiActive) return;
+    psiActive = active;
+    if (active) {
+      if (!muted) {
+        psiAudio = _mk('over-psi.ogg');
+        psiAudio.loop = true;
+        psiAudio.play().catch(() => {});
+      }
+    } else {
+      if (psiAudio) { psiAudio.pause(); psiAudio.currentTime = 0; psiAudio = null; }
+    }
+  }
+
+  /* ── One-shot clips ────────────────────────────────── */
+  function startup() {
+    enqueue(['startup.ogg']);
+  }
+
+  // wagonId: 1-8, doorLabel: 'FR' | 'FL' | 'BR' | 'BL'
+  // Plays: "door" · "<n>" · "front"/"back" · "right"/"left"
+  function announceDoor(wagonId, doorLabel) {
+    const fb = doorLabel[0] === 'F' ? 'voc/front.ogg' : 'voc/back.ogg';
+    const lr = doorLabel[1] === 'R' ? 'voc/right.ogg' : 'voc/left.ogg';
+    enqueue(['voc/door.ogg', `voc/${wagonId}.ogg`, fb, lr]);
+  }
+
+  // One-shot vocal for a newly-appeared brake error
+  function announceBrake() {
+    enqueue(['voc/brakeserror.ogg']);
+  }
+
+  /* ── Mute toggle ───────────────────────────────────── */
+  function toggleMute() {
+    muted = !muted;
+    if (muted) {
+      if (critAudio) critAudio.pause();
+      if (psiAudio)  psiAudio.pause();
+    } else {
+      if (critActive) {
+        critAudio = _mk('crit_error_loop.ogg');
+        critAudio.loop = true;
+        critAudio.play().catch(() => {});
+      }
+      if (psiActive) {
+        psiAudio = _mk('over-psi.ogg');
+        psiAudio.loop = true;
+        psiAudio.play().catch(() => {});
+      }
+      if (isPlaying === false && queue.length > 0) _drain();
+    }
+    return muted;
+  }
+
+  function isMuted() { return muted; }
+
+  return { startup, setCritLoop, setPsiLoop, announceDoor, announceBrake, toggleMute, isMuted };
+})();
 async function fetchStatus() {
   const r = await fetch('/api/status');
   return r.json();
@@ -140,13 +252,43 @@ async function toggleDoor(wagonId, doorIdx) {
   }
 }
 
-/* ─── Main poll loop ─────────────────────────────────────── */
+/* ─── Error state tracking ───────────────────────────────── */
+let prevErrorKeys = new Set();
+
+function errorKey(err) {
+  // Unique string per active error so we can detect new ones
+  return `${err.code}::${err.text}`;
+}
+
+function processErrors(errors) {
+  const currentKeys = new Set(errors.map(errorKey));
+
+  errors.forEach(err => {
+    if (!prevErrorKeys.has(errorKey(err))) {
+      // Newly appeared error → one-shot vocal announcement
+      if (err.code === 35) {
+        SoundEngine.announceDoor(err.wagon, DOOR_LABELS[err.door]);
+      } else if (err.code === 45 && err.text.includes('BRAKE')) {
+        SoundEngine.announceBrake();
+      }
+    }
+  });
+
+  const hasPsi = errors.some(e => e.code === 45);
+
+  // Drive both looping alarms
+  SoundEngine.setCritLoop(errors.length > 0);
+  SoundEngine.setPsiLoop(hasPsi);
+
+  prevErrorKeys = currentKeys;
+  renderErrors(errors);
+}
 async function poll() {
   try {
     const res = await fetchStatus();
     if (res.ok) {
       renderHeader(res.train);
-      renderErrors(res.errors);
+      processErrors(res.errors);
       renderPSI(
         res.train,
         res.psi_max,
@@ -161,6 +303,29 @@ async function poll() {
 }
 
 window.poll = poll;
+
+/* ─── Mute toggle (called from header button) ─────────────── */
+window.toggleMute = function () {
+  const nowMuted = SoundEngine.toggleMute();
+  const btn = document.getElementById('mute-btn');
+  if (btn) {
+    btn.textContent = nowMuted ? '\uD83D\uDD07' : '\uD83D\uDD0A';
+    btn.title = nowMuted ? 'Unmute audio' : 'Mute audio';
+  }
+};
+
+/* ─── Startup ────────────────────────────────────────────── */
+let _startupFired = false;
+function _tryStartup() {
+  if (_startupFired) return;
+  _startupFired = true;
+  SoundEngine.startup();
+}
+// Attempt immediately (works on kiosk / embedded systems)
+_tryStartup();
+// Fallback: fire on first user gesture if autoplay was blocked
+document.addEventListener('click',   _tryStartup, { once: true });
+document.addEventListener('keydown', _tryStartup, { once: true });
 
 tickClock();
 setInterval(tickClock, 1000);

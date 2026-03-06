@@ -1,98 +1,124 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Train Config</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <title>TRAINSYS 1 — Config</title>
   <style>
-    body {font-family: Arial, Helvetica, sans-serif; background:#fff; color:#222}
-    .card{max-width:520px;margin:80px auto;padding:24px;border-radius:8px;border:1px solid #eee}
-    label{display:block;margin-bottom:8px}
-    select,input{width:100%;padding:10px;margin-bottom:12px;border:1px solid #ddd;border-radius:6px}
-    button{padding:10px 14px;border-radius:6px;border:none;background:#111;color:#fff}
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #14161a;
+      --panel:    #1c1f24;
+      --border:   #2e343b;
+      --text:     #dde4ed;
+      --dim:      #6a7580;
+      --red:      #d63030;
+      --green:    #1fa855;
+      --font:     'Courier New', Courier, monospace;
+    }
+    html, body { height: 100%; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+    .card { background: var(--panel); border: 2px solid var(--border); border-radius: 6px; padding: 36px 40px; width: 680px; max-width: 96vw; }
+    .sysname { font-size: 1.6rem; font-weight: 900; letter-spacing: 5px; color: #fff; margin-bottom: 6px; }
+    .subtitle { font-size: 0.7rem; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; margin-bottom: 28px; }
+    .section-label { font-size: 0.65rem; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; margin-bottom: 12px; }
+    /* 8-tile selector */
+    .tiles { display: flex; gap: 8px; margin-bottom: 28px; }
+    .tile {
+      flex: 1; padding: 14px 0; border: 2px solid var(--border); border-radius: 4px;
+      background: var(--bg); color: var(--dim); font-family: var(--font);
+      font-size: 1.3rem; font-weight: 900; text-align: center; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .tile:hover  { border-color: #4a555f; color: var(--text); }
+    .tile.active { border-color: var(--green); color: #fff; background: rgba(31,168,85,0.10); }
+    /* Mini train preview */
+    .preview-track {
+      background: #0d0f11; border: 1px solid var(--border); border-radius: 4px;
+      padding: 14px 16px; display: flex; align-items: center; gap: 6px;
+      min-height: 72px; margin-bottom: 28px; overflow-x: auto;
+    }
+    .loco-mini { width: 30px; height: 48px; background: #c0c5ca; border-radius: 50% 3px 3px 50%; flex-shrink: 0; }
+    .wagon-mini {
+      flex: 0 0 auto; width: 52px; height: 48px;
+      background: var(--panel); border: 1px solid #383e47; border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 900; color: #fff;
+    }
+    .coupler-mini { width: 8px; height: 3px; background: #444; flex-shrink: 0; border-radius: 1px; }
+    /* Submit */
+    .primary-btn {
+      background: #fff; color: #111; border: none; padding: 12px 28px;
+      border-radius: 4px; font-family: var(--font); font-size: 0.85rem;
+      font-weight: 900; letter-spacing: 2px; text-transform: uppercase;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .primary-btn:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>Train Configuration</h2>
+    <div class="sysname">TRAINSYS&nbsp;1</div>
+    <div class="subtitle">Train Configuration</div>
+
     <form method="POST" id="wagons-form">
-      <label>Select number of wagons</label>
-      <div style="display:flex;align-items:center;gap:18px;margin-top:12px">
-        <button type="button" class="counter-btn" id="dec">−</button>
-        <div class="counter-display" id="counter">3</div>
-        <button type="button" class="counter-btn" id="inc">+</button>
-        <input type="range" min="1" max="20" value="3" id="wagon-range" class="range-input" />
+      <div class="section-label">Number of wagons</div>
+
+      <!-- 8-tile selector -->
+      <div class="tiles" id="tiles">
+        <div class="tile" data-n="1">1</div>
+        <div class="tile" data-n="2">2</div>
+        <div class="tile" data-n="3">3</div>
+        <div class="tile" data-n="4">4</div>
+        <div class="tile" data-n="5">5</div>
+        <div class="tile" data-n="6">6</div>
+        <div class="tile" data-n="7">7</div>
+        <div class="tile" data-n="8">8</div>
       </div>
-      <input type="hidden" name="wagons" id="wagons-input" value="3" />
-      <div style="margin-top:18px;display:flex;gap:12px;align-items:center">
-        <button class="primary-btn" type="submit">Continue</button>
-        <a href="/" class="ghost-btn">Reset</a>
-      </div>
+
+      <input type="hidden" name="wagons" id="wagons-input" value="4" />
+
+      <!-- Live mini preview -->
+      <div class="section-label">Preview</div>
+      <div class="preview-track" id="preview-track"></div>
+
+      <button class="primary-btn" type="submit">Continue &rsaquo;</button>
     </form>
-    <div style="margin-top:22px">
-      <h4 style="margin:0 0 8px 0">Preview</h4>
-      <div class="train-preview" id="preview-row"></div>
-    </div>
+  </div>
 
   <script>
-    const dec = document.getElementById('dec');
-    const inc = document.getElementById('inc');
-    const display = document.getElementById('counter');
-    const range = document.getElementById('wagon-range');
-    const hidden = document.getElementById('wagons-input');
-    const preview = document.getElementById('preview-row');
-    function renderPreview(n){
-      preview.innerHTML='';
-      for(let i=1;i<=n;i++){
-        const w = document.createElement('div'); w.className='wagon';
-        const doors = document.createElement('div'); doors.className='doors';
-        for(let d=0;d<4;d++){ const dd=document.createElement('div'); dd.className='door'; dd.textContent='C'; doors.appendChild(dd); }
-        w.appendChild(doors);
-        const foot=document.createElement('div'); foot.style.position='absolute';foot.style.bottom='8px';foot.style.left='12px';foot.style.fontSize='13px';foot.style.color='#555'; foot.textContent='W '+i; w.appendChild(foot);
-        // coupling line
-        if(i>1){ const link = document.createElement('div'); link.className='coupler'; preview.appendChild(link); }
-        preview.appendChild(w);
+    const tiles   = document.querySelectorAll('.tile');
+    const hidden  = document.getElementById('wagons-input');
+    const track   = document.getElementById('preview-track');
+
+    function renderPreview(n) {
+      track.innerHTML = '';
+      // Locomotive
+      const loco = document.createElement('div');
+      loco.className = 'loco-mini';
+      track.appendChild(loco);
+      for (let i = 1; i <= n; i++) {
+        const coupler = document.createElement('div');
+        coupler.className = 'coupler-mini';
+        track.appendChild(coupler);
+        const w = document.createElement('div');
+        w.className = 'wagon-mini';
+        w.textContent = i;
+        track.appendChild(w);
       }
     }
-    function setVal(n){
-      n = Math.max(1, Math.min(20, n|0));
-      display.textContent = n;
-      range.value = n;
+
+    function setVal(n) {
+      n = Math.max(1, Math.min(8, n | 0));
       hidden.value = n;
+      tiles.forEach(t => t.classList.toggle('active', +t.dataset.n === n));
       renderPreview(n);
     }
-    dec.addEventListener('click', ()=> setVal(parseInt(range.value)-1));
-    inc.addEventListener('click', ()=> setVal(parseInt(range.value)+1));
-    range.addEventListener('input', ()=> setVal(parseInt(range.value)));
-    // init
-    setVal(3);
-  </script>
-  </div>
 
-  <script>
-    // selector behavior: choose a wagon count and update hidden field
-    const items = document.querySelectorAll('.selector-item');
-    const input = document.getElementById('wagons-input');
-    const preview = document.getElementById('preview-row');
-    function setSelected(n){
-      items.forEach(it=>{it.classList.toggle('selected', it.dataset.val==n)});
-      input.value = n;
-      // render preview wagons
-      preview.innerHTML = '';
-      for(let i=1;i<=n;i++){
-        const w = document.createElement('div'); w.className='wagon';
-        const doors = document.createElement('div'); doors.className='doors';
-        for(let d=0;d<4;d++){ const dd=document.createElement('div'); dd.className='door'; dd.textContent='C'; doors.appendChild(dd); }
-        w.appendChild(doors);
-        const foot=document.createElement('div'); foot.style.position='absolute';foot.style.bottom='8px';foot.style.left='12px';foot.style.fontSize='13px';foot.style.color='#555'; foot.textContent='W '+i; w.appendChild(foot);
-        preview.appendChild(w);
-      }
-    }
-    items.forEach(it=>it.addEventListener('click',()=>setSelected(it.dataset.val)));
-    // default
-    setSelected(input.value);
+    tiles.forEach(t => t.addEventListener('click', () => setVal(+t.dataset.n)));
+
+    // Default selection
+    setVal(4);
   </script>
-  </div>
 </body>
 </html>

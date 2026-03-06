@@ -137,6 +137,12 @@
       transition: color 0.15s, border-color 0.15s;
     }
     .hdr-nav a:hover { color: var(--text-white); border-color: rgba(255, 255, 255, 0.35); }
+    .mute-btn {
+      background: none; border: 1px solid var(--border); border-radius: 3px;
+      color: var(--text-dim); font-size: 1rem; padding: 4px 10px; cursor: pointer;
+      transition: color 0.15s, border-color 0.15s; line-height: 1.5;
+    }
+    .mute-btn:hover { color: var(--text-white); border-color: rgba(255, 255, 255, 0.35); }
 
     /* ════════════════════════════════════════
        MAIN CONTENT (middle zone)
@@ -393,6 +399,7 @@
 
     <!-- Nav -->
     <div class="hdr-nav">
+      <button id="mute-btn" class="mute-btn" onclick="toggleMute()" title="Mute audio">&#128266;</button>
       <a href="/admin">ADMIN</a>
       <a href="/logout">LOGOUT</a>
     </div>

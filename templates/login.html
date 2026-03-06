@@ -1,66 +1,133 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Login</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <title>TRAINSYS 1 &mdash; Driver Login</title>
   <style>
-    body{background:#fff;color:#222;font-family:Arial;margin:0}
-    .card{max-width:640px;margin:60px auto;padding:20px;border:1px solid #eee;border-radius:8px}
-    label{display:block;margin:8px 0}
-    input{width:100%;padding:10px;margin-bottom:10px;border:1px solid #ddd;border-radius:6px}
-    .row{display:flex;gap:12px}
-    .row > *{flex:1}
-    button{background:#111;color:#fff;padding:10px;border-radius:6px;border:none}
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:     #14161a;
+      --panel:  #1c1f24;
+      --border: #2e343b;
+      --text:   #dde4ed;
+      --dim:    #6a7580;
+      --green:  #1fa855;
+      --red:    #d63030;
+      --font:   'Courier New', Courier, monospace;
+    }
+    html, body { min-height: 100%; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font);
+           display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+
+    .card { background: var(--panel); border: 2px solid var(--border); border-radius: 6px;
+            padding: 36px 40px; width: 760px; max-width: 96vw; display: flex; gap: 40px; }
+
+    /* Left: form */
+    .form-col { flex: 1; min-width: 0; }
+    .sysname  { font-size: 1.35rem; font-weight: 900; letter-spacing: 4px; color: #fff; margin-bottom: 4px; }
+    .subtitle { font-size: 0.65rem; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; margin-bottom: 26px; }
+
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .field label {
+      font-size: 0.62rem; letter-spacing: 3px; color: var(--dim); text-transform: uppercase;
+    }
+    .field input {
+      background: #0d0f11; border: 2px solid var(--border); border-radius: 3px;
+      color: var(--text); font-family: var(--font); font-size: 1rem; font-weight: 700;
+      padding: 10px 12px; outline: none; letter-spacing: 2px;
+      transition: border-color 0.15s;
+    }
+    .field input:focus { border-color: var(--green); }
+    .field input::placeholder { color: var(--dim); font-weight: 400; letter-spacing: 1px; }
+
+    .wagons-badge {
+      display: inline-block; border: 2px solid var(--border); border-radius: 3px;
+      padding: 6px 16px; font-size: 1.1rem; font-weight: 900; color: #fff;
+      letter-spacing: 3px; margin-bottom: 24px;
+    }
+    .wagons-badge span { color: var(--green); }
+
+    .btn-row { display: flex; gap: 12px; align-items: center; margin-top: 4px; }
+    .primary-btn {
+      background: #fff; color: #111; border: none; padding: 11px 24px;
+      border-radius: 3px; font-family: var(--font); font-size: 0.82rem;
+      font-weight: 900; letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .primary-btn:hover { opacity: 0.85; }
+    .ghost-btn {
+      color: var(--dim); text-decoration: none; font-size: 0.72rem;
+      letter-spacing: 2px; text-transform: uppercase; border: 1px solid var(--border);
+      padding: 10px 16px; border-radius: 3px; transition: color 0.15s, border-color 0.15s;
+    }
+    .ghost-btn:hover { color: var(--text); border-color: #4a555f; }
+
+    /* Right: train preview */
+    .preview-col { width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+    .preview-label { font-size: 0.62rem; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; }
+    .preview-track {
+      background: #0d0f11; border: 1px solid var(--border); border-radius: 4px;
+      padding: 10px 10px; display: flex; flex-direction: column; gap: 5px;
+      flex: 1;
+    }
+    .loco-mini { width: 36px; height: 20px; background: #c0c5ca; border-radius: 50% 3px 3px 50%; flex-shrink: 0; }
+    .wagon-mini-row { display: flex; align-items: center; gap: 5px; }
+    .coupler-mini  { width: 10px; height: 3px; background: #444; border-radius: 1px; flex-shrink: 0; }
+    .wagon-mini {
+      flex: 1; height: 28px; background: var(--panel); border: 1px solid #383e47;
+      border-radius: 3px; display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; font-weight: 900; color: #fff;
+    }
   </style>
 </head>
 <body>
   <div class="card">
-    <div style="display:flex;gap:18px;align-items:flex-start">
-      <div style="flex:1">
-        <h2 style="margin-top:0;margin-bottom:6px">Driver Login</h2>
-        <div class="header-meta">Train configuration: <strong>{{wagons}}</strong> wagons</div>
-        <form method="POST" style="margin-top:14px;">
-          <input type="hidden" name="wagons" value="{{wagons}}" />
-          <div class="form-field">
-            <label>Train number (required)</label>
-            <input class="form-input" name="train_number" placeholder="e.g. 1234" required />
-          </div>
-          <div class="form-field">
-            <label>End station (required)</label>
-            <input class="form-input" name="endstation" placeholder="Station code" required />
-          </div>
-          <div class="form-field">
-            <label>Driver number (required)</label>
-            <input class="form-input" name="driver" placeholder="Driver ID" required />
-          </div>
-          <div style="margin-top:12px;display:flex;gap:12px">
-            <button class="primary-btn" type="submit">Enter Dashboard</button>
-            <a href="/" class="ghost-btn">Back</a>
-          </div>
-        </form>
-      </div>
-      <div style="width:360px">
-        <div class="card" style="background:linear-gradient(180deg,#f6f8fa,#eef3f6);border:1px solid #cbd6df">
-          <h3 style="margin-top:0">Preview</h3>
-          <div class="train-row" id="login-preview">
-            {% set preview_count = wagons if wagons < 6 else 6 %}
-            {% for i in range(1, preview_count + 1) %}
-              <div class="wagon">
-                <div class="doors">
-                  <div class="door">C</div>
-                  <div class="door">C</div>
-                  <div class="door">C</div>
-                  <div class="door">C</div>
-                </div>
-                <div style="position:absolute;bottom:8px;left:12px;font-size:13px;color:#555">W {{i}}</div>
-              </div>
-            {% endfor %}
-          </div>
+
+    <!-- Form column -->
+    <div class="form-col">
+      <div class="sysname">TRAINSYS&nbsp;1</div>
+      <div class="subtitle">Driver Login</div>
+
+      <div class="wagons-badge">WAGONS:&nbsp;<span>{{wagons}}</span></div>
+
+      <form method="POST">
+        <input type="hidden" name="wagons" value="{{wagons}}" />
+
+        <div class="field">
+          <label>Train Number</label>
+          <input name="train_number" maxlength="8" placeholder="SSSSTTTT" required />
         </div>
+        <div class="field">
+          <label>End Station</label>
+          <input name="endstation" maxlength="4" placeholder="0000" required />
+        </div>
+        <div class="field">
+          <label>Driver ID</label>
+          <input name="driver" maxlength="6" placeholder="000000" required />
+        </div>
+
+        <div class="btn-row">
+          <button class="primary-btn" type="submit">Enter Dashboard &rsaquo;</button>
+          <a href="/" class="ghost-btn">Back</a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Preview column -->
+    <div class="preview-col">
+      <div class="preview-label">Train Preview</div>
+      <div class="preview-track">
+        <div class="loco-mini"></div>
+        {% for i in range(1, wagons + 1) %}
+          <div class="wagon-mini-row">
+            <div class="coupler-mini"></div>
+            <div class="wagon-mini">{{ i }}</div>
+          </div>
+        {% endfor %}
       </div>
     </div>
+
   </div>
 </body>
 </html>
