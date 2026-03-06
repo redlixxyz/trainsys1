@@ -14,6 +14,17 @@ if not os.path.exists(LOG_FILE):
     with open(LOG_FILE, 'w') as f:
         f.write('timestamp,train_number,endstation,driver,wagons\n')
 
+# Door position labels (index → abbreviation)
+# 0 = FR (Front Right)  1 = FL (Front Left)
+# 2 = BR (Back Right)   3 = BL (Back Left)
+DOOR_LABELS = ['FR', 'FL', 'BR', 'BL']
+
+# PSI scale and alert thresholds
+PSI_MAX             = 200
+BRAKE_THRESHOLD     = 150   # EC:45 alert when brake_psi exceeds this
+HYDRAULIC_MIN       = 50    # EC:45 alert when hydraulic_psi falls below this
+HYDRAULIC_THRESHOLD = 100   # mid-range marker line shown on gauge
+
 
 def log_login(train_number, endstation, driver, wagons):
     ts = datetime.utcnow().isoformat()
@@ -26,17 +37,17 @@ def make_train(wagons, train_number, endstation, driver):
     for i in range(wagons):
         wagons_list.append({
             'id': i + 1,
-            # four doors: 0..3
+            # four doors per wagon: FR=0, FL=1, BR=2, BL=3
             'doors': ['closed'] * 4,
-            # pressure 0-100
-            'pressure': random.randint(70, 100)
         })
     return {
         'train_number': train_number,
-        'endstation': endstation,
-        'driver': driver,
-        'wagons': wagons_list,
-        'created': datetime.utcnow().isoformat()
+        'endstation':   endstation,
+        'driver':       driver,
+        'wagons':       wagons_list,
+        'brake_psi':    random.randint(80, 170),
+        'hydraulic_psi': random.randint(60, 140),
+        'created':      datetime.utcnow().isoformat(),
     }
 
 
@@ -114,13 +125,42 @@ def main():
 def api_status():
     if TRAIN is None:
         return jsonify({'ok': False, 'msg': 'no train configured'})
-    # compute errors
+
     errors = []
+
+    # Door fault errors (EC:35)
     for w in TRAIN['wagons']:
-        for di, d in enumerate(w['doors']):
-            if d == 'error':
-                errors.append({'wagon': w['id'], 'door': di})
-    return jsonify({'ok': True, 'train': TRAIN, 'time': datetime.now().isoformat(), 'errors': errors})
+        for di, state in enumerate(w['doors']):
+            if state == 'error':
+                pos = DOOR_LABELS[di]
+                errors.append({
+                    'code':     35,
+                    'text':     f"DOOR {w['id']}{pos} FAILURE",
+                    'wagon':    w['id'],
+                    'door':     di,
+                    'priority': 1,
+                })
+
+    # PSI errors (EC:45)
+    brake_psi = TRAIN.get('brake_psi', 0)
+    hydr_psi  = TRAIN.get('hydraulic_psi', 0)
+    if brake_psi > BRAKE_THRESHOLD:
+        errors.append({'code': 45, 'text': 'BRAKE PSI HIGH',    'priority': 2})
+    if hydr_psi < HYDRAULIC_MIN:
+        errors.append({'code': 45, 'text': 'HYDRAULIC PSI LOW', 'priority': 2})
+
+    # Sort: priority asc, then code asc
+    errors.sort(key=lambda e: (e['priority'], e['code']))
+
+    return jsonify({
+        'ok':    True,
+        'train': TRAIN,
+        'time':  datetime.now().isoformat(),
+        'errors': errors,
+        'psi_max':                PSI_MAX,
+        'brake_threshold_pct':    BRAKE_THRESHOLD    / PSI_MAX,
+        'hydraulic_threshold_pct': HYDRAULIC_THRESHOLD / PSI_MAX,
+    })
 
 
 @app.route('/api/set-door', methods=['POST'])
@@ -144,17 +184,23 @@ def api_set_door():
     return jsonify({'ok': True, 'doors': TRAIN['wagons'][w]['doors']})
 
 
-@app.route('/api/set-pressure', methods=['POST'])
-def api_set_pressure():
+@app.route('/api/set-psi', methods=['POST'])
+def api_set_psi():
+    """Set global brake or hydraulic PSI.
+    POST JSON: { "kind": "brake" | "hydraulic", "value": 0-200 }
+    """
     global TRAIN
     if TRAIN is None:
         return jsonify({'ok': False})
-    data = request.get_json() or {}
-    w = int(data.get('wagon', 1)) - 1
-    val = int(data.get('pressure', 80))
-    if w < 0 or w >= len(TRAIN['wagons']):
-        return jsonify({'ok': False})
-    TRAIN['wagons'][w]['pressure'] = max(0, min(100, val))
+    data  = request.get_json() or {}
+    kind  = data.get('kind')
+    value = max(0, min(PSI_MAX, int(data.get('value', 100))))
+    if kind == 'brake':
+        TRAIN['brake_psi'] = value
+    elif kind == 'hydraulic':
+        TRAIN['hydraulic_psi'] = value
+    else:
+        return jsonify({'ok': False, 'msg': 'kind must be brake or hydraulic'})
     return jsonify({'ok': True})
 
 

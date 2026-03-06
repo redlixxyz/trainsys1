@@ -1,61 +1,450 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Train Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TRAINSYS 1 — Driver Console</title>
   <style>
-    :root{--muted:#cfcfcf;--accent:#0b6;--bg:#fff}
-    body{background:var(--bg);color:#222;font-family:Inter,Arial,Helvetica,sans-serif;margin:0}
-    header{display:flex;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #eee}
-    .container{display:grid;grid-template-columns:1fr 420px;gap:14px;padding:14px}
-    .left{min-height:400px;padding:12px}
-    .train-row{display:flex;gap:8px;align-items:center;justify-content:center}
-    .wagon{width:160px;height:80px;border:1px solid #ddd;border-radius:6px;position:relative;background:#fafafa}
-    .wagon .doors{position:absolute;left:6px;right:6px;top:10px;display:flex;justify-content:space-between}
-    .door{width:22%;height:56px;background:#ddd;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#666;font-size:11px}
-    .door.open{background:#9be6a1;color:#033}
-    .door.error{background:#ff6b6b;color:#fff;animation:blink 1s linear infinite}
-    @keyframes blink{50%{opacity:0.2}}
-    .status-box{background:#fff;border:1px solid #eee;padding:12px;border-radius:6px}
-    .right{padding:12px}
-    .gauge{border:1px solid #eee;padding:10px;border-radius:6px;margin-bottom:10px}
-    .bar{height:18px;background:#eee;border-radius:6px;overflow:hidden}
-    .bar > i{display:block;height:100%;background:linear-gradient(90deg,#6aa6ff,#0b6);width:50%}
-    .time{font-size:14px;color:#333}
+    /* ── Reset ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Design tokens ───────────────────────────────────── */
+    :root {
+      --bg-dark:      #14161a;
+      --bg-panel:     #1c1f24;
+      --bg-mid:       #22262b;
+      --border:       #2e343b;
+      --text-white:   #ffffff;
+      --text-bright:  #dde4ed;
+      --text-dim:     #7a8490;
+      --red:          #d63030;
+      --red-glow:     rgba(214, 48, 48, 0.22);
+      --green:        #1fa855;
+      --gray-door:    #363c44;
+      --font:         'Courier New', Courier, monospace;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-bright);
+      font-family: var(--font);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ════════════════════════════════════════
+       TOP HEADER BAR
+    ════════════════════════════════════════ */
+    .top-header {
+      display: flex;
+      align-items: stretch;
+      background: var(--bg-panel);
+      border-bottom: 2px solid var(--border);
+      flex-shrink: 0;
+      height: 78px;
+    }
+
+    /* Left block — system name */
+    .hdr-sysname {
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      background: var(--bg-dark);
+      border-right: 2px solid var(--border);
+      flex-shrink: 0;
+    }
+    .sysname-text {
+      font-size: 1.9rem;
+      font-weight: 900;
+      letter-spacing: 4px;
+      color: var(--text-white);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    /* Center block — train / driver info */
+    .hdr-traininfo {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 20px 0 24px;
+      border-left: 2px solid rgba(255, 255, 255, 0.10);
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+    .info-row {
+      font-size: 0.75rem;
+      letter-spacing: 1.8px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .info-row .val {
+      color: var(--text-white);
+      font-weight: 700;
+      font-size: 0.88rem;
+      margin-left: 10px;
+      letter-spacing: 2px;
+    }
+
+    /* Far-right block — clock */
+    .hdr-clock {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-end;
+      padding: 0 24px;
+      border-left: 2px solid var(--border);
+      background: var(--bg-dark);
+      flex-shrink: 0;
+    }
+    .clock-time {
+      font-size: 2.7rem;
+      font-weight: 900;
+      color: var(--text-white);
+      letter-spacing: 3px;
+      line-height: 1;
+    }
+    .clock-date {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+
+    /* Nav links */
+    .hdr-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px;
+      border-left: 2px solid var(--border);
+      flex-shrink: 0;
+    }
+    .hdr-nav a {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.68rem;
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .hdr-nav a:hover { color: var(--text-white); border-color: rgba(255, 255, 255, 0.35); }
+
+    /* ════════════════════════════════════════
+       MAIN CONTENT (middle zone)
+    ════════════════════════════════════════ */
+    .main-content {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── Error / message area (left, white bg) ─────────── */
+    .error-area {
+      flex: 1;
+      background: #ffffff;
+      padding: 24px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      color: #111;
+      min-width: 0;
+    }
+    .error-section-label {
+      font-size: 0.62rem;
+      color: #aaa;
+      letter-spacing: 3.5px;
+      text-transform: uppercase;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e5e5e5;
+      margin-bottom: 4px;
+    }
+
+    /* Primary (critical) error — red, large, underlined */
+    .primary-error {
+      font-size: 1.65rem;
+      font-weight: 900;
+      color: var(--red);
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 4px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      line-height: 1.28;
+      padding: 6px 0 4px;
+      animation: pulse-red 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse-red {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.75; }
+    }
+    .primary-error.hidden { display: none; }
+
+    /* Nominal state */
+    .no-errors {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--green);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 6px 0;
+    }
+    .no-errors.hidden { display: none; }
+
+    /* Secondary error lines */
+    .secondary-error {
+      font-size: 1.05rem;
+      color: #1a1a1a;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 5px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    /* ── PSI gauge area (right, dark bg) ───────────────── */
+    .psi-area {
+      width: 188px;
+      flex-shrink: 0;
+      background: var(--bg-panel);
+      border-left: 3px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 14px 14px 12px;
+    }
+    .psi-section-label {
+      font-size: 1.55rem;
+      font-style: italic;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 5px;
+      margin-bottom: 12px;
+    }
+    .psi-gauges-row {
+      display: flex;
+      gap: 14px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* One vertical gauge column */
+    .psi-gauge {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      height: 100%;
+    }
+    .psi-numeric {
+      font-size: 0.66rem;
+      color: var(--text-dim);
+      font-weight: 700;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    .bar-track {
+      flex: 1;
+      width: 100%;
+      border: 2px solid var(--border);
+      border-radius: 3px;
+      background: #0d0f11;
+      position: relative;
+      overflow: visible;
+      min-height: 60px;
+    }
+    .bar-fill {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      border-radius: 2px 2px 1px 1px;
+      transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .bar-fill.brake     { background: var(--red); box-shadow: 0 -6px 16px var(--red-glow); }
+    .bar-fill.hydraulic { background: #52585f; }
+    .bar-threshold {
+      position: absolute;
+      left: -6px; right: -6px;
+      height: 2px;
+      background: #ffffff;
+      z-index: 3;
+      pointer-events: none;
+    }
+    .psi-gauge-lbl {
+      font-size: 0.60rem;
+      color: var(--text-dim);
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+    }
+
+    /* ════════════════════════════════════════
+       BOTTOM TRAIN OVERVIEW BAR
+    ════════════════════════════════════════ */
+    .train-overview {
+      background: var(--bg-mid);
+      border-top: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 8px 16px;
+      flex-shrink: 0;
+      overflow-x: auto;
+      min-height: 110px;
+      gap: 0;
+    }
+
+    /* Locomotive (rounded front end) */
+    .loco {
+      flex-shrink: 0;
+      width: 50px;
+      height: 80px;
+      background: #d2d8de;
+      border-radius: 50% 6px 6px 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+      font-size: 1.3rem;
+      color: #444;
+    }
+
+    /* Row of wagon unit columns */
+    .wagons-row {
+      display: flex;
+      flex: 1;
+      gap: 4px;
+    }
+
+    /* Single wagon column (top strip + body + bottom strip) */
+    .wagon-unit {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 3px;
+      min-width: 52px;
+    }
+
+    /* Door colour strips */
+    .door-strip {
+      display: flex;
+      gap: 2px;
+    }
+    .door-seg {
+      flex: 1;
+      height: 10px;
+      border-radius: 2px;
+      background: var(--gray-door);
+      cursor: pointer;
+      transition: background 0.25s;
+    }
+    .door-seg.open  { background: var(--green); }
+    .door-seg.error { background: var(--red); animation: blink 0.85s step-end infinite; }
+
+    @keyframes blink { 50% { opacity: 0.08; } }
+
+    /* Wagon body */
+    .wagon-body {
+      background: var(--bg-dark);
+      border: 1px solid #383e47;
+      border-radius: 4px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wagon-num {
+      font-size: 1.65rem;
+      font-weight: 900;
+      color: var(--text-white);
+      letter-spacing: 1px;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <div style="display:flex;align-items:center;gap:18px;">
-      <div>
-        <strong>trainsys1</strong>
-        <div class="header-meta">Driver Console — industrial</div>
-      </div>
-      <div style="margin-left:18px;background:linear-gradient(90deg,#0b1320,#14202a);padding:8px 12px;border-radius:8px;color:#dde8f3;box-shadow:inset 0 -6px 12px rgba(255,255,255,0.02)}">
-        <div style="font-weight:700">Train <span id="train-number">—</span></div>
-        <div class="header-meta" style="font-size:13px">To <span id="train-end">—</span> · Driver <span id="train-driver">—</span></div>
-      </div>
-      <div style="margin-left:18px;color:#c7d6df;font-size:13px">Unit overview</div>
+
+  <!-- ═══════════ TOP HEADER BAR ═══════════ -->
+  <header class="top-header">
+
+    <!-- Left: System name -->
+    <div class="hdr-sysname">
+      <span class="sysname-text">TRAINSYS&nbsp;1</span>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <div class="time" id="top-time"></div>
-      <a href="/admin" style="background:#eee;padding:8px 12px;border-radius:6px;border:1px solid #ddd;color:#111;text-decoration:none;">Admin</a>
-      <a href="/logs/logins.csv" target="_blank" style="background:#eee;padding:8px 12px;border-radius:6px;border:1px solid #ddd;color:#111;text-decoration:none;">View Logins</a>
-      <a href="/logout" style="background:#eee;padding:8px 12px;border-radius:6px;border:1px solid #ddd;color:#111;text-decoration:none;">Logout</a>
+
+    <!-- Centre: Train / driver info -->
+    <div class="hdr-traininfo">
+      <div class="info-row">TRAIN-NUMBER<span class="val" id="h-train-number">—</span></div>
+      <div class="info-row">END<span class="val" id="h-endstation">—</span></div>
+      <div class="info-row">DRIVER<span class="val" id="h-driver">—</span></div>
     </div>
+
+    <!-- Far right: Clock + date -->
+    <div class="hdr-clock">
+      <div class="clock-time" id="h-time">00:00</div>
+      <div class="clock-date" id="h-date">01.01.2000</div>
+    </div>
+
+    <!-- Nav -->
+    <div class="hdr-nav">
+      <a href="/admin">ADMIN</a>
+      <a href="/logout">LOGOUT</a>
+    </div>
+
   </header>
-  <div class="container">
-    <div class="left">
-      <div class="status-box" id="status-box">Loading status...</div>
-      <div style="height:18px"></div>
-      <div style="padding:8px;background:linear-gradient(180deg,#f7f7f7,#eaeaea);border-radius:8px;border:1px solid #ddd;box-shadow:inset 0 2px 0 rgba(255,255,255,0.6)}"></div>
-      <div class="train-row" id="train-row" style="margin-top:12px;align-items:flex-end;"> <!-- wagons inserted here --> </div>
-    </div>
-    <div class="right">
-      <h4>Hydraulic Pressure</h4>
-      <div id="gauges"></div>
+
+  <!-- ═══════════ MAIN CONTENT ═══════════ -->
+  <div class="main-content">
+
+    <!-- Error / message area -->
+    <section class="error-area">
+      <div class="error-section-label">System Status</div>
+      <div id="primary-error" class="primary-error hidden"></div>
+      <div id="no-errors"     class="no-errors     hidden">&#10003; All Systems Nominal</div>
+      <div id="secondary-errors"></div>
+    </section>
+
+    <!-- PSI gauges -->
+    <aside class="psi-area">
+      <div class="psi-section-label">PSI</div>
+      <div class="psi-gauges-row">
+
+        <!-- Left bar: Braking pressure (red) -->
+        <div class="psi-gauge">
+          <div class="psi-numeric" id="brake-val">— PSI</div>
+          <div class="bar-track">
+            <div class="bar-fill brake"    id="brake-bar"       style="height:0%"></div>
+            <div class="bar-threshold"     id="brake-threshold" style="bottom:75%"></div>
+          </div>
+          <div class="psi-gauge-lbl">BRK</div>
+        </div>
+
+        <!-- Right bar: Hydraulic pressure (gray) -->
+        <div class="psi-gauge">
+          <div class="psi-numeric" id="hydraulic-val">— PSI</div>
+          <div class="bar-track">
+            <div class="bar-fill hydraulic"    id="hydraulic-bar"       style="height:0%"></div>
+            <div class="bar-threshold"         id="hydraulic-threshold" style="bottom:50%"></div>
+          </div>
+          <div class="psi-gauge-lbl">HYD</div>
+        </div>
+
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- ═══════════ BOTTOM TRAIN OVERVIEW ═══════════ -->
+  <div class="train-overview">
+    <div class="loco">&#9658;</div>
+    <div class="wagons-row" id="wagons-overview">
+      <!-- wagon units injected by app.js -->
     </div>
   </div>
 
