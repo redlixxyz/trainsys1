@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — Logins</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    body{background:#fff;color:#111;font-family:Segoe UI,Arial,Helvetica,sans-serif;margin:0}
+    .card{max-width:1200px;margin:36px auto;padding:20px;border-radius:8px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
+    th{background:linear-gradient(180deg,#f6f9fc,#eef4fa);font-weight:700}
+    .controls{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+  </style>
+</head>
+<body>
+  <header style="padding:18px 30px;border-bottom:1px solid #e1e8ef;">
+    <strong>trainsys1</strong>
+    <div style="float:right"><a href="/" style="text-decoration:none;color:#111">Back</a></div>
+  </header>
+  <div class="card">
+    <h2>Login Audit</h2>
+    <div class="controls">
+      <a href="/logs/logins.csv" target="_blank" style="background:#eee;padding:8px 12px;border-radius:6px;border:1px solid #ddd;color:#111;text-decoration:none;">Download CSV</a>
+      <div class="muted">Showing most recent entries first</div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Timestamp (UTC)</th><th>Train</th><th>Endstation</th><th>Driver</th><th>Wagons</th></tr>
+      </thead>
+      <tbody>
+        {% for r in logins %}
+        <tr>
+          <td>{{ r.timestamp }}</td>
+          <td>{{ r.train_number }}</td>
+          <td>{{ r.endstation }}</td>
+          <td>{{ r.driver }}</td>
+          <td>{{ r.wagons }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="muted">No logins yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    body{background:#fff;color:#222;font-family:Arial;margin:0}
+    .card{max-width:640px;margin:60px auto;padding:20px;border:1px solid #eee;border-radius:8px}
+    label{display:block;margin:8px 0}
+    input{width:100%;padding:10px;margin-bottom:10px;border:1px solid #ddd;border-radius:6px}
+    .row{display:flex;gap:12px}
+    .row > *{flex:1}
+    button{background:#111;color:#fff;padding:10px;border-radius:6px;border:none}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div style="display:flex;gap:18px;align-items:flex-start">
+      <div style="flex:1">
+        <h2 style="margin-top:0;margin-bottom:6px">Driver Login</h2>
+        <div class="header-meta">Train configuration: <strong>{{wagons}}</strong> wagons</div>
+        <form method="POST" style="margin-top:14px;">
+          <input type="hidden" name="wagons" value="{{wagons}}" />
+          <div class="form-field">
+            <label>Train number (required)</label>
+            <input class="form-input" name="train_number" placeholder="e.g. 1234" required />
+          </div>
+          <div class="form-field">
+            <label>End station (required)</label>
+            <input class="form-input" name="endstation" placeholder="Station code" required />
+          </div>
+          <div class="form-field">
+            <label>Driver number (required)</label>
+            <input class="form-input" name="driver" placeholder="Driver ID" required />
+          </div>
+          <div style="margin-top:12px;display:flex;gap:12px">
+            <button class="primary-btn" type="submit">Enter Dashboard</button>
+            <a href="/" class="ghost-btn">Back</a>
+          </div>
+        </form>
+      </div>
+      <div style="width:360px">
+        <div class="card" style="background:linear-gradient(180deg,#f6f8fa,#eef3f6);border:1px solid #cbd6df">
+          <h3 style="margin-top:0">Preview</h3>
+          <div class="train-row" id="login-preview">
+            {% set preview_count = wagons if wagons < 6 else 6 %}
+            {% for i in range(1, preview_count + 1) %}
+              <div class="wagon">
+                <div class="doors">
+                  <div class="door">C</div>
+                  <div class="door">C</div>
+                  <div class="door">C</div>
+                  <div class="door">C</div>
+                </div>
+                <div style="position:absolute;bottom:8px;left:12px;font-size:13px;color:#555">W {{i}}</div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

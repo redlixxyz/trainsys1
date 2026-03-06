@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Train Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    :root{--muted:#cfcfcf;--accent:#0b6;--bg:#fff}
+    body{background:var(--bg);color:#222;font-family:Inter,Arial,Helvetica,sans-serif;margin:0}
+    header{display:flex;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #eee}
+    .container{display:grid;grid-template-columns:1fr 420px;gap:14px;padding:14px}
+    .left{min-height:400px;padding:12px}
+    .train-row{display:flex;gap:8px;align-items:center;justify-content:center}
+    .wagon{width:160px;height:80px;border:1px solid #ddd;border-radius:6px;position:relative;background:#fafafa}
+    .wagon .doors{position:absolute;left:6px;right:6px;top:10px;display:flex;justify-content:space-between}
+    .door{width:22%;height:56px;background:#ddd;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#666;font-size:11px}
+    .door.open{background:#9be6a1;color:#033}
+    .door.error{background:#ff6b6b;color:#fff;animation:blink 1s linear infinite}
+    @keyframes blink{50%{opacity:0.2}}
+    .status-box{background:#fff;border:1px solid #eee;padding:12px;border-radius:6px}
+    .right{padding:12px}
+    .gauge{border:1px solid #eee;padding:10px;border-radius:6px;margin-bottom:10px}
+    .bar{height:18px;background:#eee;border-radius:6px;overflow:hidden}
+    .bar > i{display:block;height:100%;background:linear-gradient(90deg,#6aa6ff,#0b6);width:50%}
+    .time{font-size:14px;color:#333}
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display:flex;align-items:center;gap:18px;">
+      <div>
+        <strong>trainsys1</strong>
+        <div class="header-meta">Driver Console — industrial</div>
+      </div>
+      <div style="margin-left:18px;background:linear-gradient(90deg,#0b1320,#14202a);padding:8px 12px;border-radius:8px;color:#dde8f3;box-shadow:inset 0 -6px 12px rgba(255,255,255,0.02)}">
+        <div style="font-weight:700">Train <span id="train-number">—</span></div>
+        <div class="header-meta" style="font-size:13px">To <span id="train-end">—</span> · Driver <span id="train-driver">—</span></div>
+      </div>
+      <div style="margin-left:18px;color:#c7d6df;font-size:13px">Unit overview</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="time" id="top-time"></div>
+      <a href="/admin" style="background:#eee;padding:8px 12px;border-radius:6px;border:1px solid #ddd;color:#111;text-decoration:none;">Admin</a>
+      <a href="/logs/logins.csv" target="_blank" style="background:#eee;padding:8px 12px;border-radius:6px;border:1px solid #ddd;color:#111;text-decoration:none;">View Logins</a>
+      <a href="/logout" style="background:#eee;padding:8px 12px;border-radius:6px;border:1px solid #ddd;color:#111;text-decoration:none;">Logout</a>
+    </div>
+  </header>
+  <div class="container">
+    <div class="left">
+      <div class="status-box" id="status-box">Loading status...</div>
+      <div style="height:18px"></div>
+      <div style="padding:8px;background:linear-gradient(180deg,#f7f7f7,#eaeaea);border-radius:8px;border:1px solid #ddd;box-shadow:inset 0 2px 0 rgba(255,255,255,0.6)}"></div>
+      <div class="train-row" id="train-row" style="margin-top:12px;align-items:flex-end;"> <!-- wagons inserted here --> </div>
+    </div>
+    <div class="right">
+      <h4>Hydraulic Pressure</h4>
+      <div id="gauges"></div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
